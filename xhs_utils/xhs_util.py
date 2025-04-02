@@ -9,17 +9,17 @@ from xhs_utils.cookie_util import trans_cookies
 # 获取当前脚本所在的目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # 构造 static 目录的绝对路径 (假设 static 在 xhs_utils 的上一级目录，即 spider_xhs/static)
-static_dir = os.path.join(current_dir, '..', 'static')
+static_dir = os.path.join(current_dir, "..", "static")
 
 # 构造 JS 文件的绝对路径
-js_file_path = os.path.join(static_dir, 'xhs_xs_xsc_56.js')
-xray_js_file_path = os.path.join(static_dir, 'xhs_xray.js')
-pack1_js_path = os.path.join(static_dir, 'xhs_xray_pack1.js').replace('\\', '/')
-pack2_js_path = os.path.join(static_dir, 'xhs_xray_pack2.js').replace('\\', '/')
+js_file_path = os.path.join(static_dir, "xhs_xs_xsc_56.js")
+xray_js_file_path = os.path.join(static_dir, "xhs_xray.js")
+pack1_js_path = os.path.join(static_dir, "xhs_xray_pack1.js").replace("\\", "/")
+pack2_js_path = os.path.join(static_dir, "xhs_xray_pack2.js").replace("\\", "/")
 
 # Load xhs_xs_xsc_56.js
 try:
-    with open(js_file_path, 'r', encoding='utf-8') as f:
+    with open(js_file_path, "r", encoding="utf-8") as f:
         js = execjs.compile(f.read())
 except Exception as e:
     print(f"Error loading {js_file_path}: {e}")
@@ -28,7 +28,7 @@ except Exception as e:
 
 # Load and modify xhs_xray.js
 try:
-    with open(xray_js_file_path, 'r', encoding='utf-8') as f:
+    with open(xray_js_file_path, "r", encoding="utf-8") as f:
         xray_js_content = f.read()
 
     # 将绝对路径转义以便在 JS 字符串中使用
@@ -42,12 +42,12 @@ try:
     xray_js_content = re.sub(
         r"require\(path\.join\(__dirname, *['\"]xhs_xray_pack1\.js['\"]\)\);?",
         f"require('{escaped_pack1_path}');",
-        xray_js_content
+        xray_js_content,
     )
     xray_js_content = re.sub(
         r"require\(path\.join\(__dirname, *['\"]xhs_xray_pack2\.js['\"]\)\);?",
         f"require('{escaped_pack2_path}');",
-        xray_js_content
+        xray_js_content,
     )
 
     # 移除 const path = require('path'); (如果存在)
@@ -60,24 +60,29 @@ except Exception as e:
     print(f"Error loading or processing {xray_js_file_path}: {e}")
     raise
 
+
 def generate_x_b3_traceid(len=16):
     x_b3_traceid = ""
     for t in range(len):
         x_b3_traceid += "abcdef0123456789"[math.floor(16 * random.random())]
     return x_b3_traceid
 
-def generate_xs_xs_common(a1, api, data=''):
-    ret = js.call('get_request_headers_params', api, data, a1)
-    xs, xt, xs_common = ret['xs'], ret['xt'], ret['xs_common']
+
+def generate_xs_xs_common(a1, api, data=""):
+    ret = js.call("get_request_headers_params", api, data, a1)
+    xs, xt, xs_common = ret["xs"], ret["xt"], ret["xs_common"]
     return xs, xt, xs_common
 
-def generate_xs(a1, api, data=''):
-    ret = js.call('get_xs', api, data, a1)
-    xs, xt = ret['X-s'], ret['X-t']
+
+def generate_xs(a1, api, data=""):
+    ret = js.call("get_xs", api, data, a1)
+    xs, xt = ret["X-s"], ret["X-t"]
     return xs, xt
 
+
 def generate_xray_traceid():
-    return xray_js.call('traceId')
+    return xray_js.call("traceId")
+
 
 def get_common_headers():
     return {
@@ -87,16 +92,17 @@ def get_common_headers():
         "cache-control": "no-cache",
         "pragma": "no-cache",
         "referer": "https://www.xiaohongshu.com/",
-        "sec-ch-ua": "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"",
+        "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "document",
         "sec-fetch-mode": "navigate",
         "sec-fetch-site": "same-origin",
         "sec-fetch-user": "?1",
         "upgrade-insecure-requests": "1",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     }
+
 
 def get_request_headers_template():
     return {
@@ -108,9 +114,9 @@ def get_request_headers_template():
         "origin": "https://www.xiaohongshu.com",
         "pragma": "no-cache",
         "referer": "https://www.xiaohongshu.com/",
-        "sec-ch-ua": "\"Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121\"",
+        "sec-ch-ua": '"Not A(Brand";v="99", "Microsoft Edge";v="121", "Chromium";v="121"',
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
@@ -119,32 +125,34 @@ def get_request_headers_template():
         "x-s": "",
         "x-s-common": "",
         "x-t": "",
-        "x-xray-traceid": generate_xray_traceid()
+        "x-xray-traceid": generate_xray_traceid(),
     }
 
-def generate_headers(a1, api, data=''):
+
+def generate_headers(a1, api, data=""):
     xs, xt, xs_common = generate_xs_xs_common(a1, api, data)
     x_b3_traceid = generate_x_b3_traceid()
     headers = get_request_headers_template()
-    headers['x-s'] = xs
-    headers['x-t'] = str(xt)
-    headers['x-s-common'] = xs_common
-    headers['x-b3-traceid'] = x_b3_traceid
+    headers["x-s"] = xs
+    headers["x-t"] = str(xt)
+    headers["x-s-common"] = xs_common
+    headers["x-b3-traceid"] = x_b3_traceid
     if data:
-        data = json.dumps(data, separators=(',', ':'), ensure_ascii=False)
+        data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
     return headers, data
 
-def generate_request_params(cookies_str, api, data=''):
+
+def generate_request_params(cookies_str, api, data=""):
     cookies = trans_cookies(cookies_str)
-    a1 = cookies['a1']
+    a1 = cookies["a1"]
     headers, data = generate_headers(a1, api, data)
     return headers, cookies, data
 
+
 def splice_str(api, params):
-    url = api + '?'
+    url = api + "?"
     for key, value in params.items():
         if value is None:
-            value = ''
-        url += key + '=' + value + '&'
+            value = ""
+        url += key + "=" + value + "&"
     return url[:-1]
-
