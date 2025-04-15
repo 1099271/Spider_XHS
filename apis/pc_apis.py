@@ -1198,48 +1198,48 @@ if __name__ == "__main__":
     所有涉及数据爬取的api都在此文件中
     数据注入的api违规请勿尝试
     """
-    xhs_apis = XHS_Apis()
-    cookies_str = r""
-    # 获取用户信息
-    user_url = "https://www.xiaohongshu.com/user/profile/67a332a2000000000d008358?xsec_token=ABTf9yz4cLHhTycIlksF0jOi1yIZgfcaQ6IXNNGdKJ8xg=&xsec_source=pc_feed"
-    success, msg, user_info = xhs_apis.get_user_info(
-        "67a332a2000000000d008358", cookies_str
-    )
-    logger.info(
-        f"获取用户信息结果 {json.dumps(user_info, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    success, msg, note_list = xhs_apis.get_user_all_notes(user_url, cookies_str)
-    logger.info(
-        f"获取用户所有笔记结果 {json.dumps(note_list, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取笔记信息
-    note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
-    success, msg, note_info = xhs_apis.get_note_info(note_url, cookies_str)
-    logger.info(
-        f"获取笔记信息结果 {json.dumps(note_info, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取搜索关键词
-    query = "榴莲"
-    success, msg, search_keyword = xhs_apis.get_search_keyword(query, cookies_str)
-    logger.info(
-        f"获取搜索关键词结果 {json.dumps(search_keyword, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 搜索笔记
-    query = "榴莲"
-    query_num = 10
-    sort = "general"
-    note_type = 0
-    success, msg, notes = xhs_apis.search_some_note(
-        query, query_num, cookies_str, sort, note_type
-    )
-    logger.info(
-        f"搜索笔记结果 {json.dumps(notes, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取笔记评论
-    note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
-    success, msg, note_all_comment = xhs_apis.get_note_all_comment(
-        note_url, cookies_str
-    )
-    logger.info(
-        f"获取笔记评论结果 {json.dumps(note_all_comment, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
+    # xhs_apis = XHS_Apis()
+    # cookies_str = r""
+    # # 获取用户信息
+    # user_url = "https://www.xiaohongshu.com/user/profile/67a332a2000000000d008358?xsec_token=ABTf9yz4cLHhTycIlksF0jOi1yIZgfcaQ6IXNNGdKJ8xg=&xsec_source=pc_feed"
+    # success, msg, user_info = xhs_apis.get_user_info(
+    #     "67a332a2000000000d008358", cookies_str
+    # )
+    # logger.info(
+    #     f"获取用户信息结果 {json.dumps(user_info, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # success, msg, note_list = xhs_apis.get_user_all_notes(user_url, cookies_str)
+    # logger.info(
+    #     f"获取用户所有笔记结果 {json.dumps(note_list, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取笔记信息
+    # note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
+    # success, msg, note_info = xhs_apis.get_note_info(note_url, cookies_str)
+    # logger.info(
+    #     f"获取笔记信息结果 {json.dumps(note_info, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取搜索关键词
+    # query = "榴莲"
+    # success, msg, search_keyword = xhs_apis.get_search_keyword(query, cookies_str)
+    # logger.info(
+    #     f"获取搜索关键词结果 {json.dumps(search_keyword, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 搜索笔记
+    # query = "榴莲"
+    # query_num = 10
+    # sort = "general"
+    # note_type = 0
+    # success, msg, notes = xhs_apis.search_some_note(
+    #     query, query_num, cookies_str, sort, note_type
+    # )
+    # logger.info(
+    #     f"搜索笔记结果 {json.dumps(notes, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取笔记评论
+    # note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
+    # success, msg, note_all_comment = xhs_apis.get_note_all_comment(
+    #     note_url, cookies_str
+    # )
+    # logger.info(
+    #     f"获取笔记评论结果 {json.dumps(note_all_comment, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
