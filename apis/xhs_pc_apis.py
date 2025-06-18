@@ -473,11 +473,12 @@ class XHS_Apis:
                 proxies=proxies,
             )
             res_json = response.json()
-            success, msg = res_json["success"], res_json["msg"]
+            success, msg, code = res_json["success"], res_json["msg"], res_json["code"]
         except Exception as e:
             success = False
             msg = str(e)
-        return success, msg, res_json
+            code = -1
+        return success, msg, code, res_json
 
     def get_search_keyword(self, word: str, cookies_str: str, proxies: dict = None):
         """
