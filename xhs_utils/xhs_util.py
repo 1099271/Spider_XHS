@@ -2,22 +2,63 @@ import json
 import math
 import random
 import execjs
+import os
+import re
 from xhs_utils.cookie_util import trans_cookies
 
-try:
-    js = execjs.compile(
-        open(r"../static/xhs_xs_xsc_56.js", "r", encoding="utf-8").read()
-    )
-except:
-    js = execjs.compile(open(r"static/xhs_xs_xsc_56.js", "r", encoding="utf-8").read())
+# 获取当前脚本所在的目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 构造 static 目录的绝对路径 (假设 static 在 xhs_utils 的上一级目录，即 spider_xhs/static)
+static_dir = os.path.join(current_dir, '..', 'static')
 
-try:
-    xray_js = execjs.compile(
-        open(r"../static/xhs_xray.js", "r", encoding="utf-8").read()
-    )
-except:
-    xray_js = execjs.compile(open(r"static/xhs_xray.js", "r", encoding="utf-8").read())
+# 构造 JS 文件的绝对路径
+js_file_path = os.path.join(static_dir, 'xhs_xs_xsc_56.js')
+xray_js_file_path = os.path.join(static_dir, 'xhs_xray.js')
+pack1_js_path = os.path.join(static_dir, 'xhs_xray_pack1.js').replace('\\', '/')
+pack2_js_path = os.path.join(static_dir, 'xhs_xray_pack2.js').replace('\\', '/')
 
+# Load xhs_xs_xsc_56.js
+try:
+    with open(js_file_path, 'r', encoding='utf-8') as f:
+        js = execjs.compile(f.read())
+except Exception as e:
+    print(f"Error loading {js_file_path}: {e}")
+    # 可以选择在这里抛出异常或进行其他错误处理
+    raise
+
+# Load and modify xhs_xray.js
+try:
+    with open(xray_js_file_path, 'r', encoding='utf-8') as f:
+        xray_js_content = f.read()
+
+    # 将绝对路径转义以便在 JS 字符串中使用
+    # 在 Python f-string 中，花括号 {} 需要加倍 {{}} 来转义
+    # 在 JS 字符串中，单引号 ' 需要转义为 \'
+    escaped_pack1_path = pack1_js_path.replace("'", "\\'")
+    escaped_pack2_path = pack2_js_path.replace("'", "\\'")
+
+    # 替换 require(path.join(__dirname...)) 为 require('/absolute/path/to/file')
+    # 使用 re.sub 提高匹配的鲁棒性
+    xray_js_content = re.sub(
+        r"require\(path\.join\(__dirname, *['\"]xhs_xray_pack1\.js['\"]\)\);?",
+        f"require('{escaped_pack1_path}');",
+        xray_js_content
+    )
+    xray_js_content = re.sub(
+        r"require\(path\.join\(__dirname, *['\"]xhs_xray_pack2\.js['\"]\)\);?",
+        f"require('{escaped_pack2_path}');",
+        xray_js_content
+    )
+
+    # 移除 const path = require('path'); (如果存在)
+    xray_js_content = xray_js_content.replace("const path = require('path');\n", "")
+
+    # Compile the modified JS code
+    xray_js = execjs.compile(xray_js_content)
+
+except Exception as e:
+    print(f"Error loading or processing {xray_js_file_path}: {e}")
+    raise
 
 def generate_x_b3_traceid(len=16):
     x_b3_traceid = ""

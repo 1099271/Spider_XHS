@@ -1,6 +1,7 @@
 # encoding: utf-8
 import json
 import re
+import time
 import urllib
 import requests
 from xhs_utils.xhs_util import (
@@ -771,32 +772,61 @@ class XHS_Apis:
         self, note_id: str, xsec_token: str, cookies_str: str, proxies: dict = None
     ):
         """
-        获取笔记的全部一级评论
-        :param note_id 笔记的id
-        :param cookies_str 你的cookies
-        返回笔记的全部一级评论
+        获取笔记的全部一级评论，采用容错方式处理
         """
         cursor = ""
         note_out_comment_list = []
+
         try:
+            # 分页获取一级评论
             while True:
-                success, msg, res_json = self.get_note_out_comment(
-                    note_id, cursor, xsec_token, cookies_str, proxies
-                )
-                if not success:
-                    raise Exception(msg)
-                comments = res_json["data"]["comments"]
-                if "cursor" in res_json["data"]:
-                    cursor = str(res_json["data"]["cursor"])
-                else:
-                    break
-                note_out_comment_list.extend(comments)
-                if len(note_out_comment_list) == 0 or not res_json["data"]["has_more"]:
-                    break
+                try:
+                    success, msg, res_json = self.get_note_out_comment(
+                        note_id, cursor, xsec_token, cookies_str, proxies
+                    )
+
+                    # 检查返回数据结构
+                    if not success or not res_json or "data" not in res_json:
+                        logger.warning(
+                            f"获取一级评论页面失败: note_id={note_id}, msg={msg}"
+                        )
+                        break  # 停止获取，但保留已有评论
+
+                    # 尝试获取评论列表，失败时优雅处理
+                    try:
+                        comments = res_json["data"]["comments"]
+                        note_out_comment_list.extend(comments)
+                    except KeyError:
+                        logger.warning(
+                            f"一级评论数据结构异常: note_id={note_id}, keys={res_json.get('data', {}).keys()}"
+                        )
+                        break  # 数据结构异常，停止获取
+
+                    # 检查是否有更多页
+                    if "cursor" in res_json["data"] and res_json["data"].get(
+                        "has_more", False
+                    ):
+                        cursor = str(res_json["data"]["cursor"])
+                        time.sleep(0.5)  # 添加延迟，避免请求过快
+                    else:
+                        break  # 没有更多评论，正常结束
+
+                except Exception as e:
+                    logger.error(
+                        f"获取一级评论页面时出错: note_id={note_id}, error={str(e)}"
+                    )
+                    break  # 发生异常，停止获取但保留已有评论
+
+            return (
+                True,
+                f"已获取 {len(note_out_comment_list)} 条一级评论",
+                note_out_comment_list,
+            )
+
         except Exception as e:
-            success = False
-            msg = str(e)
-        return success, msg, note_out_comment_list
+            # 外层异常处理，确保不会中断整体流程
+            logger.exception(f"处理一级评论时发生错误: note_id={note_id}")
+            return False, f"处理一级评论时发生错误: {str(e)}", note_out_comment_list
 
     def get_note_inner_comment(
         self,
@@ -844,63 +874,146 @@ class XHS_Apis:
         self, comment: dict, xsec_token: str, cookies_str: str, proxies: dict = None
     ):
         """
-        获取笔记的全部二级评论
-        :param comment 笔记的一级评论
-        :param cookies_str 你的cookies
-        返回笔记的全部二级评论
+        获取评论的全部二级评论，采用容错方式处理
         """
+        # 确保sub_comments字段存在
+        if "sub_comments" not in comment:
+            comment["sub_comments"] = []
+
+        # 检查是否需要获取更多评论
+        if not comment.get("sub_comment_has_more", False):
+            return True, "无需获取更多二级评论", comment
+
         try:
-            if not comment["sub_comment_has_more"]:
-                return True, "success", comment
-            cursor = comment["sub_comment_cursor"]
+            cursor = comment.get("sub_comment_cursor", "")
             inner_comment_list = []
+
+            # 分页获取二级评论
             while True:
-                success, msg, res_json = self.get_note_inner_comment(
-                    comment, cursor, xsec_token, cookies_str, proxies
-                )
-                if not success:
-                    raise Exception(msg)
-                comments = res_json["data"]["comments"]
-                if "cursor" in res_json["data"]:
-                    cursor = str(res_json["data"]["cursor"])
-                else:
-                    break
-                inner_comment_list.extend(comments)
-                if not res_json["data"]["has_more"]:
-                    break
+                try:
+                    success, msg, res_json = self.get_note_inner_comment(
+                        comment, cursor, xsec_token, cookies_str, proxies
+                    )
+
+                    # 检查返回数据结构
+                    if not success or not res_json or "data" not in res_json:
+                        logger.warning(
+                            f"获取二级评论页面失败: comment_id={comment.get('id')}, msg={msg}"
+                        )
+                        break  # 停止获取，但保留已有评论
+
+                    # 尝试获取评论列表，失败时优雅处理
+                    try:
+                        comments = res_json["data"]["comments"]
+                        inner_comment_list.extend(comments)
+                    except KeyError:
+                        logger.warning(
+                            f"二级评论数据结构异常: comment_id={comment.get('id')}, keys={res_json.get('data', {}).keys()}"
+                        )
+                        break  # 数据结构异常，停止获取
+
+                    # 检查是否有更多页
+                    if "cursor" in res_json["data"] and res_json["data"].get(
+                        "has_more", False
+                    ):
+                        cursor = str(res_json["data"]["cursor"])
+                        time.sleep(0.5)  # 添加延迟，避免请求过快
+                    else:
+                        break  # 没有更多评论，正常结束
+
+                except Exception as e:
+                    logger.error(
+                        f"获取二级评论页面时出错: comment_id={comment.get('id')}, error={str(e)}"
+                    )
+                    break  # 发生异常，停止获取但保留已有评论
+
+            # 将获取到的二级评论添加到一级评论中
             comment["sub_comments"].extend(inner_comment_list)
+            comment["sub_comment_has_more"] = False  # 标记为已全部获取(即使可能不完整)
+
+            return True, f"已获取 {len(inner_comment_list)} 条二级评论", comment
+
         except Exception as e:
-            success = False
-            msg = str(e)
-        return success, msg, comment
+            # 外层异常处理，确保不会中断整体流程
+            logger.exception(f"处理二级评论时发生错误: comment_id={comment.get('id')}")
+            return False, f"处理二级评论时发生错误: {str(e)}", comment
 
     def get_note_all_comment(self, url: str, cookies_str: str, proxies: dict = None):
         """
-        获取一篇文章的所有评论
-        :param note_id: 你想要获取的笔记的id
+        获取一篇文章的所有评论，采用容错方式处理
+        :param url: 你想要获取的笔记的url
         :param cookies_str: 你的cookies
-        返回一篇文章的所有评论
+        返回尽可能多的评论数据，即使部分获取失败
         """
         out_comment_list = []
         try:
+            # 解析URL获取参数
             urlParse = urllib.parse.urlparse(url)
             note_id = urlParse.path.split("/")[-1]
             kvs = urlParse.query.split("&")
-            kvDist = {kv.split("=")[0]: kv.split("=")[1] for kv in kvs}
-            success, msg, out_comment_list = self.get_note_all_out_comment(
-                note_id, kvDist["xsec_token"], cookies_str, proxies
-            )
-            if not success:
-                raise Exception(msg)
-            for comment in out_comment_list:
-                success, msg, new_comment = self.get_note_all_inner_comment(
-                    comment, kvDist["xsec_token"], cookies_str, proxies
+            kvDist = {kv.split("=")[0]: kv.split("=")[1] for kv in kvs if "=" in kv}
+            xsec_token = kvDist.get("xsec_token", "")
+
+            # 尝试获取一级评论，即使失败也返回部分数据
+            try:
+                logger.info(f"开始获取笔记一级评论: note_id={note_id}")
+                success, msg, out_comment_list = self.get_note_all_out_comment(
+                    note_id, xsec_token, cookies_str, proxies
                 )
                 if not success:
-                    raise Exception(msg)
+                    logger.warning(
+                        f"获取一级评论过程中出现异常: {msg}，但将继续处理已获取的评论"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"获取一级评论时发生错误: {str(e)}，但将尝试处理已获取的评论"
+                )
+
+            # 即使一级评论获取不完整，也继续处理已获取的评论
+            if out_comment_list:
+                logger.info(
+                    f"获取到 {len(out_comment_list)} 条一级评论，开始获取二级评论"
+                )
+
+                # 逐个处理一级评论下的二级评论
+                for i, comment in enumerate(out_comment_list):
+                    if i > 0 and i % 10 == 0:
+                        logger.info(
+                            f"已处理 {i}/{len(out_comment_list)} 条一级评论的二级评论"
+                        )
+
+                    # 检查评论数据有效性
+                    if not isinstance(comment, dict) or "id" not in comment:
+                        logger.warning(f"跳过无效的一级评论数据: {comment}")
+                        continue
+
+                    # 尝试获取二级评论，失败时记录日志并继续
+                    try:
+                        success, msg, _ = self.get_note_all_inner_comment(
+                            comment, xsec_token, cookies_str, proxies
+                        )
+                        if not success:
+                            logger.warning(
+                                f"获取二级评论时出现异常: comment_id={comment.get('id')}, msg={msg}"
+                            )
+                    except Exception as e:
+                        logger.error(
+                            f"处理评论ID={comment.get('id')}的二级评论时出错: {str(e)}"
+                        )
+
+            # 无论过程中是否有错误，都将返回已获取的评论列表
+            success = True  # 流程完成即视为成功
+            msg = "评论获取流程完成，可能包含部分评论"
+
         except Exception as e:
-            success = False
-            msg = str(e)
+            # 仅在整体流程严重错误时才返回失败
+            success = (
+                False if not out_comment_list else True
+            )  # 如果已获取部分评论，仍视为成功
+            msg = f"评论获取过程中发生错误: {str(e)}"
+            logger.exception(f"获取评论流程发生严重错误: {url}")
+
+        logger.info(f"评论获取流程结束，已获取 {len(out_comment_list)} 条一级评论")
         return success, msg, out_comment_list
 
     def get_unread_message(self, cookies_str: str, proxies: dict = None):
@@ -1151,48 +1264,48 @@ if __name__ == "__main__":
     所有涉及数据爬取的api都在此文件中
     数据注入的api违规请勿尝试
     """
-    xhs_apis = XHS_Apis()
-    cookies_str = r""
-    # 获取用户信息
-    user_url = "https://www.xiaohongshu.com/user/profile/67a332a2000000000d008358?xsec_token=ABTf9yz4cLHhTycIlksF0jOi1yIZgfcaQ6IXNNGdKJ8xg=&xsec_source=pc_feed"
-    success, msg, user_info = xhs_apis.get_user_info(
-        "67a332a2000000000d008358", cookies_str
-    )
-    logger.info(
-        f"获取用户信息结果 {json.dumps(user_info, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    success, msg, note_list = xhs_apis.get_user_all_notes(user_url, cookies_str)
-    logger.info(
-        f"获取用户所有笔记结果 {json.dumps(note_list, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取笔记信息
-    note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
-    success, msg, note_info = xhs_apis.get_note_info(note_url, cookies_str)
-    logger.info(
-        f"获取笔记信息结果 {json.dumps(note_info, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取搜索关键词
-    query = "榴莲"
-    success, msg, search_keyword = xhs_apis.get_search_keyword(query, cookies_str)
-    logger.info(
-        f"获取搜索关键词结果 {json.dumps(search_keyword, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 搜索笔记
-    query = "榴莲"
-    query_num = 10
-    sort = "general"
-    note_type = 0
-    success, msg, notes = xhs_apis.search_some_note(
-        query, query_num, cookies_str, sort, note_type
-    )
-    logger.info(
-        f"搜索笔记结果 {json.dumps(notes, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
-    # 获取笔记评论
-    note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
-    success, msg, note_all_comment = xhs_apis.get_note_all_comment(
-        note_url, cookies_str
-    )
-    logger.info(
-        f"获取笔记评论结果 {json.dumps(note_all_comment, ensure_ascii=False)}: {success}, msg: {msg}"
-    )
+    # xhs_apis = XHS_Apis()
+    # cookies_str = r""
+    # # 获取用户信息
+    # user_url = "https://www.xiaohongshu.com/user/profile/67a332a2000000000d008358?xsec_token=ABTf9yz4cLHhTycIlksF0jOi1yIZgfcaQ6IXNNGdKJ8xg=&xsec_source=pc_feed"
+    # success, msg, user_info = xhs_apis.get_user_info(
+    #     "67a332a2000000000d008358", cookies_str
+    # )
+    # logger.info(
+    #     f"获取用户信息结果 {json.dumps(user_info, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # success, msg, note_list = xhs_apis.get_user_all_notes(user_url, cookies_str)
+    # logger.info(
+    #     f"获取用户所有笔记结果 {json.dumps(note_list, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取笔记信息
+    # note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
+    # success, msg, note_info = xhs_apis.get_note_info(note_url, cookies_str)
+    # logger.info(
+    #     f"获取笔记信息结果 {json.dumps(note_info, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取搜索关键词
+    # query = "榴莲"
+    # success, msg, search_keyword = xhs_apis.get_search_keyword(query, cookies_str)
+    # logger.info(
+    #     f"获取搜索关键词结果 {json.dumps(search_keyword, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 搜索笔记
+    # query = "榴莲"
+    # query_num = 10
+    # sort = "general"
+    # note_type = 0
+    # success, msg, notes = xhs_apis.search_some_note(
+    #     query, query_num, cookies_str, sort, note_type
+    # )
+    # logger.info(
+    #     f"搜索笔记结果 {json.dumps(notes, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )
+    # # 获取笔记评论
+    # note_url = r"https://www.xiaohongshu.com/explore/67d7c713000000000900e391?xsec_token=AB1ACxbo5cevHxV_bWibTmK8R1DDz0NnAW1PbFZLABXtE=&xsec_source=pc_user"
+    # success, msg, note_all_comment = xhs_apis.get_note_all_comment(
+    #     note_url, cookies_str
+    # )
+    # logger.info(
+    #     f"获取笔记评论结果 {json.dumps(note_all_comment, ensure_ascii=False)}: {success}, msg: {msg}"
+    # )

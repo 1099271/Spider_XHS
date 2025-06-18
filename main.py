@@ -170,7 +170,8 @@ if __name__ == "__main__":
     感谢star和follow
     """
 
-    cookies_str, base_path = init()
+    cookies_str = r''
+    base_path = init()
     data_spider = Data_Spider()
     """
         save_choice: all: 保存所有的信息, media: 保存视频和图片（media-video只下载视频, media-image只下载图片，media都下载）, excel: 保存到excel
