@@ -417,24 +417,14 @@ var zc666;
     zc666 = f;
 }();
 //# sourceMappingURL=https://picasso-private-1251524319.cos.ap-shanghai.myqcloud.com/data/formula-static/formula/xhs-pc-web/runtime-main.8718828.js.map
-try {
-    require('./xhs_xray_pack1.js');
-} catch (e) {
-    try {
-        require('../static/xhs_xray_pack1.js');
-    } catch (e) {
-        require('./static/xhs_xray_pack1.js');
-    }
-}
-try {
-    require('./xhs_xray_pack2.js');
-} catch (e) {
-    try {
-        require('../static/xhs_xray_pack2.js');
-    } catch (e) {
-        require('./static/xhs_xray_pack2.js');
-    }
-}
+
+// 导入 path 模块
+const path = require('path');
+
+// 使用 __dirname 构造绝对路径并加载模块
+require(path.join(__dirname, 'xhs_xray_pack1.js'));
+require(path.join(__dirname, 'xhs_xray_pack2.js'));
+
 var n = zc666(36497)
           , o = zc666(609)
           , i = zc666(2030);
